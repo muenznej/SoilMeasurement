@@ -3,7 +3,7 @@
 #define RX_PIN 4
 
 #define LED_TIME 50 // blink time for the LED
-#define TRANS_TIME 2000 // blink time for the LED
+#define TRANS_TIME 200 // blink time for the LED
 #define RED_LED 1 // tiny 1// pin with the LED connected
 #define GREEN_LED 0 //// tiny 0 d0
 
@@ -17,18 +17,12 @@
 #define WDTCR WDTCSR
 #endif
 
-struct dataStruct {
-  uint8_t soil_value ; // 1 Byte
-  uint8_t soil_state; // 1 Byte
-  uint8_t soil_conc; // 1 Byte
-  uint16_t counter; // 2 Byte
-} soil_data;
-
-uint8_t tx_buf[sizeof(soil_data)] = {0};
-
-#define RH_BUF_LEN 5 // 1+1+1+2
+#define RH_BUF_LEN 4
 #define RH_ASK_MAX_MESSAGE_LEN RH_BUF_LEN
-RH_ASK driver(RH_SPEED, RX_PIN, TX_PIN); // hier liegt das problem
+uint8_t rh_buf[RH_BUF_LEN] = { 0x00, 0x00, 0x00, 0x00};
+uint8_t rh_id = 0;
+
+RH_ASK driver(RH_SPEED, RX_PIN, TX_PIN);
 
 void setup() {
   pinMode(GREEN_LED, OUTPUT);
@@ -36,32 +30,43 @@ void setup() {
   pinMode(TX_PIN, OUTPUT);
   pinMode(RX_PIN, INPUT);
   driver.init();
-  soil_data.soil_value = 255;
-  soil_data.soil_state = 1;
-  soil_data.soil_conc = 100;
-  soil_data.counter = 1;
 }
 
 void loop() {
   digitalWrite(RED_LED, HIGH);
   digitalWrite(GREEN_LED, LOW);
+  rh_buf[0] = 0x00;
 
-  memcpy(tx_buf, &soil_data, sizeof(soil_data) );
-  uint8_t zize = sizeof(soil_data);
-  driver.send((uint8_t *)tx_buf, zize);
-  driver.waitPacketSent();
-  _delay_ms(TRANS_TIME);
-  digitalWrite(GREEN_LED, HIGH);
-  digitalWrite(RED_LED, LOW);
+  byte soil_value = 0x01;
+  byte soil_conc =  0x02;
+  byte soil_state = 0x03;
+  memcpy(&rh_buf[1], &soil_value, 1);
+  memcpy(&rh_buf[2], &soil_conc, 1);
+  memcpy(&rh_buf[3], &soil_state, 1);
 
-  for (int i = 1; i <= 2; i++) {
-    digitalWrite(GREEN_LED, HIGH);
-    digitalWrite(RED_LED, HIGH);
-    _delay_ms(LED_TIME);
-    digitalWrite(GREEN_LED, LOW);
+  rh_id++;
+  uint8_t zize = sizeof(rh_buf);
+  if (driver.send((uint8_t *)rh_buf, zize)) {
+    driver.waitPacketSent();
     digitalWrite(RED_LED, LOW);
-    _delay_ms(LED_TIME);
+    for (int i = 1; i <= 2; i++) {
+      digitalWrite(GREEN_LED, HIGH);
+      _delay_ms(LED_TIME);
+      digitalWrite(GREEN_LED, LOW);
+      _delay_ms(LED_TIME);
+    }
   }
+  else {
+    _delay_ms(TRANS_TIME);
+    digitalWrite(GREEN_LED, LOW);
+    for (int i = 1; i <= 2; i++) {
+      digitalWrite(RED_LED, HIGH);
+      _delay_ms(LED_TIME);
+      digitalWrite(RED_LED, LOW);
+      _delay_ms(LED_TIME);
+    }
+  }
+  _delay_ms(TRANS_TIME);
   // sleep bit patterns:
   //  1 second:  0b000110
   //  2 seconds: 0b000111
