@@ -5,10 +5,16 @@
 #define TRANS_TIME 200 // blink time for the LED
 #define LED_RECIEVING 4
 
-#define RH_BUF_LEN 4
+struct {
+  byte soil_value;
+  byte soil_concentration;
+  byte soil_state;
+  unsigned long counter;
+} soil_data;
+byte zize = sizeof(soil_data);
+byte rx_buf[sizeof(soil_data)] = {0};
+#define RH_BUF_LEN sizeof(soil_data)
 #define RH_ASK_MAX_MESSAGE_LEN RH_BUF_LEN
-uint8_t soil_data[RH_BUF_LEN] = { 0x00, 0x00, 0x00, 0x00};
-uint8_t rh_id = 0;
 
 RH_ASK driver(2000, 11, 12);
 
@@ -22,27 +28,28 @@ void setup() {
   else {
     Serial.println("init successful");
   }
+      soil_data.soil_concentration = 0;
+    soil_data.soil_state = 0;
+    soil_data.soil_value = 0;
 }
 
 void loop() {
   digitalWrite(LED_RECIEVING, LOW);
-  uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
-  uint8_t buflen = sizeof(buf);
-  if (driver.recv(buf, &buflen)) {
-    driver.printBuffer("Received:", buf, buflen);
-    memcpy(&soil_data, buf, buflen );
+  if (driver.recv(rx_buf, &zize)) {
+    driver.printBuffer("Received:", rx_buf, zize);
+    memcpy(&soil_data, rx_buf, zize );
     digitalWrite(LED_RECIEVING, HIGH);
-    
-//    _delay_ms(1000);
-    Serial.println(soil_data[0], DEC);
-    Serial.println(soil_data[1], DEC);
-    Serial.println(soil_data[2], DEC);
-    Serial.println(soil_data[3], DEC);
+
+    //    _delay_ms(1000);
+    Serial.println(soil_data.soil_concentration, DEC);
+    Serial.println(soil_data.soil_value, DEC);
+    Serial.println(soil_data.soil_state, DEC);
+    Serial.println(soil_data.counter, DEC);
     _delay_ms(TRANS_TIME);
-//    _delay_ms(1000);
+    //    _delay_ms(1000);
   }
-//  else {
-//    driver.printBuffer("Nothing recieved:", buf, buflen);
-//  }
+  //  else {
+  //    driver.printBuffer("Nothing recieved:", buf, buflen);
+  //  }
 }
 

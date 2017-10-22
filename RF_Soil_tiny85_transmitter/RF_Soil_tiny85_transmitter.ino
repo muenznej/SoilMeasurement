@@ -17,11 +17,18 @@
 #define WDTCR WDTCSR
 #endif
 
-#define RH_BUF_LEN 4
-#define RH_ASK_MAX_MESSAGE_LEN RH_BUF_LEN
-uint8_t rh_buf[RH_BUF_LEN] = { 0x00, 0x00, 0x00, 0x00};
-uint8_t rh_id = 0;
 
+
+struct {
+  byte soil_value;
+  byte soil_concentration;
+  byte soil_state;
+  unsigned long counter;
+} soil_data;
+byte zize = sizeof(soil_data);
+byte tx_buf[sizeof(soil_data)] = {0};
+#define RH_BUF_LEN sizeof(soil_data)
+#define RH_ASK_MAX_MESSAGE_LEN RH_BUF_LEN
 RH_ASK driver(RH_SPEED, RX_PIN, TX_PIN);
 
 void setup() {
@@ -30,23 +37,18 @@ void setup() {
   pinMode(TX_PIN, OUTPUT);
   pinMode(RX_PIN, INPUT);
   driver.init();
+  soil_data.soil_concentration = 100;
+  soil_data.soil_state = 1;
+  soil_data.soil_value = 255;
+  soil_data.counter = 1;
 }
 
 void loop() {
   digitalWrite(RED_LED, HIGH);
   digitalWrite(GREEN_LED, LOW);
-  rh_buf[0] = 0x00;
 
-  byte soil_value = 0x01;
-  byte soil_conc =  0x02;
-  byte soil_state = 0x03;
-  memcpy(&rh_buf[1], &soil_value, 1);
-  memcpy(&rh_buf[2], &soil_conc, 1);
-  memcpy(&rh_buf[3], &soil_state, 1);
-
-  rh_id++;
-  uint8_t zize = sizeof(rh_buf);
-  if (driver.send((uint8_t *)rh_buf, zize)) {
+  memcpy(tx_buf, &soil_data, sizeof(soil_data) );
+  if (driver.send((uint8_t *)tx_buf, zize)) {
     driver.waitPacketSent();
     digitalWrite(RED_LED, LOW);
     for (int i = 1; i <= 2; i++) {
@@ -66,6 +68,7 @@ void loop() {
       _delay_ms(LED_TIME);
     }
   }
+  soil_data.counter++;
   _delay_ms(TRANS_TIME);
   // sleep bit patterns:
   //  1 second:  0b000110
@@ -73,8 +76,8 @@ void loop() {
   //  4 seconds: 0b100000
   //  8 seconds: 0b100001
 
-  for (int i = 1; i <= 1; i++) {
-    myWatchdogEnable (0b000110);  // 8x2 second
+  for (int i = 1; i <= 2; i++) {
+    myWatchdogEnable (0b000111);  // 8x2 second
   }
   digitalWrite(RED_LED, LOW);
   digitalWrite(GREEN_LED, LOW);
