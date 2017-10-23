@@ -4,8 +4,7 @@
 
 #define LED_TIME 50 // blink time for the LED
 #define TRANS_TIME 200 // blink time for the LED
-#define RED_LED 1 // tiny 1// pin with the LED connected
-#define GREEN_LED 0 //// tiny 0 d0
+#define BUZZER_PIN 1
 
 #include <RH_ASK.h>
 #include <avr/wdt.h>
@@ -16,8 +15,6 @@
 #if !defined WDTCR and defined WDTCSR
 #define WDTCR WDTCSR
 #endif
-
-
 
 struct {
   byte soil_value;
@@ -32,41 +29,30 @@ byte tx_buf[sizeof(soil_data)] = {0};
 RH_ASK driver(RH_SPEED, RX_PIN, TX_PIN);
 
 void setup() {
-  pinMode(GREEN_LED, OUTPUT);
-  pinMode(RED_LED, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
   pinMode(TX_PIN, OUTPUT);
   pinMode(RX_PIN, INPUT);
+  
   driver.init();
   soil_data.soil_concentration = 100;
   soil_data.soil_state = 1;
   soil_data.soil_value = 255;
   soil_data.counter = 1;
+
 }
 
 void loop() {
-  digitalWrite(RED_LED, HIGH);
-  digitalWrite(GREEN_LED, LOW);
-
+  for (byte i=1;i<255;i++){
+  digitalWrite(BUZZER_PIN,HIGH);
+  _delay_us(500);
+   digitalWrite(BUZZER_PIN,LOW);
+   _delay_us(500);
+  }
+  
   memcpy(tx_buf, &soil_data, sizeof(soil_data) );
   if (driver.send((uint8_t *)tx_buf, zize)) {
     driver.waitPacketSent();
-    digitalWrite(RED_LED, LOW);
-    for (int i = 1; i <= 2; i++) {
-      digitalWrite(GREEN_LED, HIGH);
-      _delay_ms(LED_TIME);
-      digitalWrite(GREEN_LED, LOW);
-      _delay_ms(LED_TIME);
-    }
-  }
-  else {
-    _delay_ms(TRANS_TIME);
-    digitalWrite(GREEN_LED, LOW);
-    for (int i = 1; i <= 2; i++) {
-      digitalWrite(RED_LED, HIGH);
-      _delay_ms(LED_TIME);
-      digitalWrite(RED_LED, LOW);
-      _delay_ms(LED_TIME);
-    }
   }
   soil_data.counter++;
   _delay_ms(TRANS_TIME);
@@ -75,12 +61,11 @@ void loop() {
   //  2 seconds: 0b000111
   //  4 seconds: 0b100000
   //  8 seconds: 0b100001
-
+ 
   for (int i = 1; i <= 2; i++) {
     myWatchdogEnable (0b000111);  // 8x2 second
   }
-  digitalWrite(RED_LED, LOW);
-  digitalWrite(GREEN_LED, LOW);
+
 }
 
 ISR(WDT_vect) {
