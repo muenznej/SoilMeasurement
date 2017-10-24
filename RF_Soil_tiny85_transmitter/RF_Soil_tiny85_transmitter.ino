@@ -17,6 +17,21 @@
 #if !defined WDTCR and defined WDTCSR
 #define WDTCR WDTCSR
 #endif
+// watchdog intervals
+// sleep bit patterns for WDTCSR
+enum 
+{
+  WDT_16_MS  =  0b000000,
+  WDT_32_MS  =  0b000001,
+  WDT_64_MS  =  0b000010,
+  WDT_128_MS =  0b000011,
+  WDT_256_MS =  0b000100,
+  WDT_512_MS =  0b000101,
+  WDT_1_SEC  =  0b000110,
+  WDT_2_SEC  =  0b000111,
+  WDT_4_SEC  =  0b100000,
+  WDT_8_SEC  =  0b100001,
+};
 
 struct {
   byte soil_value = 255;
@@ -37,11 +52,11 @@ RH_ASK driver(RH_SPEED, RX_PIN, TX_PIN);
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
 
-  //pinMode(TX_PIN, OUTPUT);
+  pinMode(TX_PIN, OUTPUT);
   //pinMode(RX_PIN, INPUT);
 
   driver.init();
-  setReference();
+  //setReference();
 }
 
 void setReference() {
@@ -69,9 +84,10 @@ void processSensor() {
 }
 void loop() {
   static boolean CheckBeep = false;
-
-  processSensor();
-  if ( soil_data.counter %= 100 ) {
+  soil_data.counter++;
+  //processSensor();
+  if ( !(soil_data.counter %= 10) ) {
+    soil_data.soil_wet = false;
     CheckBeep = true;
   }
 
@@ -84,19 +100,15 @@ void loop() {
 
   //_delay_ms(TRANS_TIME); // not needed?
 
-  for (int i = 1; i <= 2; i++) {
-    // sleep bit patterns:
-    //  1 second:  0b000110
-    //  2 seconds: 0b000111
-    //  4 seconds: 0b100000
-    //  8 seconds: 0b100001
-    myWatchdogEnable (0b000111);  // 8x2 second
+  for (int i = 1; i <= 1; i++) {
+    myWatchdogEnable (WDT_32_MS);  // 8x2 second
   }
 
   if ( soil_data.soil_wet != true ) {
     if ( CheckBeep ) {
       causeNoise();
       CheckBeep = false;
+      soil_data.soil_wet = true;
     }
   }
 }
