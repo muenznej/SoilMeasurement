@@ -1,4 +1,5 @@
 #include <RH_ASK.h>
+#include <util/delay.h>
 
 #define LED_TIME 50
 #define TRANS_TIME 200 // blink time for the LED
@@ -22,7 +23,7 @@ RH_ASK driver(2000, 11, 12);
 
 void setup() {
   pinMode(LED_RECIEVING, OUTPUT);
-  Serial.begin(2400);
+  Serial.begin(9600);
   if (!driver.init()) {
     Serial.println("init failed");
   }
