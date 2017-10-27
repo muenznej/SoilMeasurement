@@ -51,7 +51,7 @@ void loop() {
   Serial.println( analogRead( SOIL_SENSOR_READ ), DEC);
   Serial.print("");
 
-  _delay_ms(1000);
+  //_delay_ms(1000);
 
   digitalWrite(LED_RECIEVING, LOW);
   if (driver.recv(rx_buf, &zize)) {

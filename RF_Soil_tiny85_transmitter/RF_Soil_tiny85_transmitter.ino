@@ -56,6 +56,7 @@ void setup() {
   //pinMode(RX_PIN, INPUT);
 
   driver.init();
+  causeNoise();
   //setReference();
 }
 
@@ -105,7 +106,7 @@ void loop() {
   _delay_ms(TRANS_TIME); // not needed?
 
   for (int i = 1; i <= 1; i++) {
-    myWatchdogEnable (WDT_32_MS);  // 8x2 second
+    myWatchdogEnable (WDT_4_SEC);
   }
 
   if ( soil_data.soil_wet != true ) {
@@ -145,7 +146,7 @@ byte measureSoil() {
   //noInterrupts();
   detachInterrupt(0);
   for (byte i = 1; i <= numIter; i++) {
-    if ( i % 2 ) {
+    if ( i%2 ) {
       pinMode(SOIL_SENSOR_POL1, INPUT);
       pinMode(SOIL_SENSOR_POL2, OUTPUT);
       _delay_ms(5);
@@ -157,16 +158,31 @@ byte measureSoil() {
       pinMode(SOIL_SENSOR_POL1, OUTPUT);
       _delay_ms(5);
       analogWrite( SOIL_SENSOR_POL1, 127 );
-      value += analogRead( SOIL_SENSOR_POL2 );
+      value += analogRead( SOIL_SENSOR_POL2 );        
     }
+     
+    //interrupts();
+    //      pinMode(SOIL_SENSOR_POL1, OUTPUT);
+    //      pinMode(SOIL_SENSOR_POL2, INPUT); // use pull/push resistors
+    //      _delay_ms(5);
+    //      digitalWrite( SOIL_SENSOR_POL1, HIGH );
+    //      value += analogRead( SOIL_SENSOR_POL2 );
+    //    }
+    //    else {
+    //      pinMode(SOIL_SENSOR_POL1, INPUT); // use pull/push resistors
+    //      pinMode(SOIL_SENSOR_POL2, OUTPUT);
+    //      _delay_ms(5);
+    //      digitalWrite( SOIL_SENSOR_POL2, HIGH );
+    //      value += analogRead( SOIL_SENSOR_POL1 );
+    //    }
   }
-
+  
   pinMode(SOIL_SENSOR_POL1, OUTPUT);
   pinMode(SOIL_SENSOR_POL1, LOW);
   pinMode(SOIL_SENSOR_POL2, OUTPUT);
   pinMode(SOIL_SENSOR_POL2, LOW);
-
+  
   value /= numIter;
-  value /= 4; 
+  value /= 4; // roughly remap 1024 DAC values to a 255 (byte)
   return (byte)value;
 }
