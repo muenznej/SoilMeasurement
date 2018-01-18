@@ -1,6 +1,6 @@
-#define RH_SPEED 600 // RadioHead bitrate in bit/s
-#define TX_PIN 3 // PB3
-#define RX_PIN 4 // PB4 // not needed
+#define RH_SPEED 2000 // RadioHead bitrate in bit/s
+#define TX_PIN 12 // PB3
+#define RX_PIN 11 // PB4 // not needed
 #define BUTTON_PIN PB2
 #define LED_TIME 50 // blink time for the LED
 #define TRANS_TIME 200 // blink time for the LED
@@ -38,9 +38,7 @@ struct {
   byte soil_concentration = 100;
   byte soil_reference = 255;
   boolean soil_wet = true;
-  
   unsigned long counter = 1;
-  unsigned short trans_time = 0;
 } soil_data;
 
 #define WATER_THRESHOLD 30 // 30%
@@ -105,7 +103,7 @@ void loop() {
     driver.waitPacketSent();
   }
 
-  //_delay_ms(TRANS_TIME); // not needed?
+  _delay_ms(TRANS_TIME); // not needed?
 
   for (int i = 1; i <= 1; i++) {
     myWatchdogEnable (WDT_4_SEC);
