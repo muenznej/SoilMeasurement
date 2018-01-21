@@ -37,8 +37,8 @@ struct {
   byte soil_value = 255;
   byte soil_concentration = 100;
   byte soil_reference = 255;
-  boolean soil_wet = true;
-  
+  boolean soil_wet = false;
+
   unsigned long counter = 1;
   unsigned short trans_time = 0;
 } soil_data;
@@ -52,6 +52,7 @@ byte tx_buf[sizeof(soil_data)] = {0};
 RH_ASK driver(RH_SPEED, RX_PIN, TX_PIN);
 
 void setup() {
+  OSCCAL -= 9; // optimized for this chip, with 10kHz testsignal
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
   pinMode(TX_PIN, OUTPUT);
@@ -69,15 +70,20 @@ void setReference() {
 }
 
 void causeNoise() { // some random noise, not optimized for resonance frequency
-  for (byte i = 1; i < 127; i++) {
+  int freq = 100;
+  int tt = 1.0 / freq * 1000 * 1000 / 2;
+  float secs = 0.1;
+  for (long i = 0; i < freq * secs; i++ )
+  {
     digitalWrite(BUZZER_PIN, HIGH);
-    _delay_us(500);
+    _delay_us(tt);
     digitalWrite(BUZZER_PIN, LOW);
-    _delay_us(500);
+    _delay_us(tt);
   }
+  tone(BUZZER_PIN,2000,100);
 }
 void processSensor() {
-  soil_data.soil_value = measureSoil();
+  //soil_data.soil_value = measureSoil();
   soil_data.soil_concentration = (byte)(soil_data.soil_value / soil_data.soil_reference);
   soil_data.counter++;
   if ( soil_data.soil_concentration <= WATER_THRESHOLD ) {
@@ -98,18 +104,18 @@ void loop() {
     CheckBeep = true;
   }
 
-
   memcpy(tx_buf, &soil_data, sizeof(soil_data) );
   pinMode(TX_PIN, OUTPUT); // needed because TX_PIN is also SOIL_SENSOR_POL1
+  _delay_ms(50);
   if (driver.send((uint8_t *)tx_buf, zize)) {
     driver.waitPacketSent();
   }
 
-  //_delay_ms(TRANS_TIME); // not needed?
-
   for (int i = 1; i <= 1; i++) {
     myWatchdogEnable (WDT_4_SEC);
   }
+
+  _delay_ms(100);
 
   if ( soil_data.soil_wet != true ) {
     if ( CheckBeep ) {
@@ -119,10 +125,10 @@ void loop() {
     }
   }
 }
+
 ISR(WDT_vect) {
   wdt_disable();
 }
-
 void myWatchdogEnable(const byte interval) {
   //attachInterrupt(0, setReference, FALLING); // use interrupt 0 (pin PB2) and run
   attachInterrupt(digitalPinToInterrupt(2), setReference, LOW ); // use interrupt 0 (pin PB2) and run
@@ -141,17 +147,16 @@ void myWatchdogEnable(const byte interval) {
   sleep_mode();
 
 }
-
 byte measureSoil() {
   byte numIter = 10;
   unsigned short value = 0;
   //noInterrupts();
   detachInterrupt(0);
   for (byte i = 1; i <= numIter; i++) {
-    if ( i%2 ) {
+    if ( i % 2 ) {
       pinMode(SOIL_SENSOR_POL1, INPUT);
       pinMode(SOIL_SENSOR_POL2, OUTPUT);
-      _delay_ms(5);
+      _delay_ms(25);
       analogWrite( SOIL_SENSOR_POL2, 127 );
       value += analogRead( SOIL_SENSOR_POL1 );
     }
@@ -160,30 +165,15 @@ byte measureSoil() {
       pinMode(SOIL_SENSOR_POL1, OUTPUT);
       _delay_ms(5);
       analogWrite( SOIL_SENSOR_POL1, 127 );
-      value += analogRead( SOIL_SENSOR_POL2 );        
+      value += analogRead( SOIL_SENSOR_POL2 );
     }
-     
-    //interrupts();
-    //      pinMode(SOIL_SENSOR_POL1, OUTPUT);
-    //      pinMode(SOIL_SENSOR_POL2, INPUT); // use pull/push resistors
-    //      _delay_ms(5);
-    //      digitalWrite( SOIL_SENSOR_POL1, HIGH );
-    //      value += analogRead( SOIL_SENSOR_POL2 );
-    //    }
-    //    else {
-    //      pinMode(SOIL_SENSOR_POL1, INPUT); // use pull/push resistors
-    //      pinMode(SOIL_SENSOR_POL2, OUTPUT);
-    //      _delay_ms(5);
-    //      digitalWrite( SOIL_SENSOR_POL2, HIGH );
-    //      value += analogRead( SOIL_SENSOR_POL1 );
-    //    }
   }
-  
+
   pinMode(SOIL_SENSOR_POL1, OUTPUT);
   pinMode(SOIL_SENSOR_POL1, LOW);
   pinMode(SOIL_SENSOR_POL2, OUTPUT);
   pinMode(SOIL_SENSOR_POL2, LOW);
-  
+
   value /= numIter;
   value /= 4; // roughly remap 1024 DAC values to a 255 (byte)
   return (byte)value;
