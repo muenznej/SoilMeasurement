@@ -1,4 +1,4 @@
-#define RH_SPEED 600 // RadioHead bitrate in bit/s
+#define RH_SPEED 2400 // RadioHead bitrate in bit/s
 #define TX_PIN 3 // PB3
 #define RX_PIN 4 // PB4 // not needed
 #define BUTTON_PIN PB2
@@ -35,12 +35,12 @@ enum
 
 struct {
   byte soil_value = 255;
-  byte soil_concentration = 100;
-  byte soil_reference = 255;
-  boolean soil_wet = false;
+//  byte soil_concentration = 100;
+//  byte soil_reference = 255;
+//  boolean soil_wet = false;
 
-  unsigned long counter = 1;
-  unsigned short trans_time = 0;
+//  unsigned long counter = 1;
+//  unsigned short trans_time = 0;
 } soil_data;
 
 #define WATER_THRESHOLD 30 // 30%
@@ -59,7 +59,7 @@ void setup() {
   //pinMode(RX_PIN, INPUT);
 
   driver.init();
-  causeNoise();
+  //causeNoise();
   //setReference();
 }
 
@@ -70,21 +70,22 @@ void setReference() {
 }
 
 void causeNoise() { // some random noise, not optimized for resonance frequency
-  int freq = 100;
-  int tt = 1.0 / freq * 1000 * 1000 / 2;
-  float secs = 0.1;
-  for (long i = 0; i < freq * secs; i++ )
-  {
-    digitalWrite(BUZZER_PIN, HIGH);
-    _delay_us(tt);
-    digitalWrite(BUZZER_PIN, LOW);
-    _delay_us(tt);
-  }
-  tone(BUZZER_PIN,2000,100);
+//    int freq = 2000;
+//    int tt = 1.0 / freq * 1000 * 1000 / 2;
+//    float secs = 0.1;
+//    for (long i = 0; i < freq * secs; i++ )
+//    {
+//      digitalWrite(BUZZER_PIN, HIGH);
+//      _delay_us(tt);
+//      digitalWrite(BUZZER_PIN, LOW);
+//      _delay_us(tt);
+//    }
+  tone(BUZZER_PIN, 2000, 100);
+
 }
 void processSensor() {
-  //soil_data.soil_value = measureSoil();
-  soil_data.soil_concentration = (byte)(soil_data.soil_value / soil_data.soil_reference);
+  soil_data.soil_value = measureSoil();
+//  soil_data.soil_concentration = (byte)(soil_data.soil_value / soil_data.soil_reference);
   soil_data.counter++;
   if ( soil_data.soil_concentration <= WATER_THRESHOLD ) {
     soil_data.soil_wet = false;
@@ -103,19 +104,23 @@ void loop() {
     soil_data.soil_wet = false;
     CheckBeep = true;
   }
-
+pinMode(TX_PIN, OUTPUT); // needed because TX_PIN is also SOIL_SENSOR_POL1
+  _delay_us(50);
   memcpy(tx_buf, &soil_data, sizeof(soil_data) );
-  pinMode(TX_PIN, OUTPUT); // needed because TX_PIN is also SOIL_SENSOR_POL1
-  _delay_ms(50);
+  
+  pinMode(4,OUTPUT);
+
   if (driver.send((uint8_t *)tx_buf, zize)) {
     driver.waitPacketSent();
+    digitalWrite(4,HIGH);
+ //   _delay_ms(50);
+  }
+digitalWrite(4,LOW);
+  for (int i = 1; i <= 2; i++) {
+    myWatchdogEnable (WDT_8_SEC);
   }
 
-  for (int i = 1; i <= 1; i++) {
-    myWatchdogEnable (WDT_4_SEC);
-  }
-
-  _delay_ms(100);
+ // _delay_ms(100);
 
   if ( soil_data.soil_wet != true ) {
     if ( CheckBeep ) {
